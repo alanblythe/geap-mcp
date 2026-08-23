@@ -1,0 +1,5 @@
+{
+  "name": "geap-mcp",
+  "description": "Talk to agents deployed on Gemini Enterprise Agent Platform: send a query to a deployed agent and follow its trajectory.",
+  "version": "0.1.0"
+}

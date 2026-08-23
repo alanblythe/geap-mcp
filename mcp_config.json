@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "geap": {
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "exec \"$HOME\"/.gemini/config/plugins/geap-mcp/bin/serve.sh"
+      ]
+    }
+  }
+}
