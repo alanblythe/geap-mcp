@@ -26,6 +26,23 @@ def _status(run_dir: pathlib.Path) -> dict:
 
 
 @mcp.tool()
+def list_agents(project: str | None = None, location: str | None = None) -> list[dict]:
+    """List the agents deployed on Agent Platform in a project and region.
+
+    Call this first when you do not already know which agent to talk to: its
+    `id` or `display_name` is what start_query takes. `deployed` false means the
+    engine runs no code and cannot answer a query -- it only holds sessions.
+
+    `project` falls back to GOOGLE_CLOUD_PROJECT or the active gcloud project,
+    `location` to AGENT_ENGINE_LOCATION. Agent Platform is regional, so an
+    agent in another region will not appear here.
+    """
+    from . import client
+
+    return client.list_engines(project, location, client.access_token())
+
+
+@mcp.tool()
 def start_query(
     engine: str,
     message: str,
@@ -41,7 +58,8 @@ def start_query(
     `message` is passed through untouched: prose for a conversational agent, a
     JSON string for one that expects a job. Knowing which is the caller's job.
 
-    `engine` is an id or a full projects/*/locations/*/reasoningEngines/* name.
+    `engine` is a display name, a numeric id, or a full
+    projects/*/locations/*/reasoningEngines/* name. Use list_agents to find one.
     `transport` of "auto" picks :streamQuery for an engine publishing
     classMethods and the container route for one that does not.
 

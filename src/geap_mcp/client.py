@@ -82,32 +82,74 @@ def host(location: str) -> str:
     return f"https://{location}-aiplatform.googleapis.com"
 
 
-def resolve(engine: str, project: str | None, location: str | None, token: str) -> dict:
-    """Take an id or a full resource name and return everything a call needs."""
-    if FULL_NAME.match(engine):
-        _, project_part, _, location, _, engine_id = engine.split("/")
-        project = project_part
-    else:
-        engine_id = engine
-        project = project or default_project()
-        location = location or os.environ.get("AGENT_ENGINE_LOCATION")
-        if not location:
-            raise ValueError("no location: pass location=, or set AGENT_ENGINE_LOCATION")
-
-    base = f"{host(location)}/v1/projects/{project}/locations/{location}/reasoningEngines"
-    detail = call(f"{base}/{engine_id}", token)
+def _describe(detail: dict, project: str, location: str) -> dict:
     spec = detail.get("spec", {}) or {}
     return {
-        "id": engine_id,
+        "id": detail.get("name", "").split("/")[-1],
         "project": project,
         "location": location,
         "name": detail.get("name", ""),
         "display_name": detail.get("displayName", ""),
+        "created": detail.get("createTime", ""),
         "class_methods": [m.get("name") for m in (spec.get("classMethods") or [])],
         # A container engine publishes classMethods too, so those cannot pick
         # the route. sourceCodeSpec is what :streamQuery 404s on.
         "container": bool(spec.get("sourceCodeSpec")),
+        # An engine with no deploymentSpec runs no code: it holds sessions and
+        # cannot be queried, and listing it as available is how a dispatch ends
+        # up aimed at nothing.
+        "deployed": bool(spec.get("deploymentSpec")),
     }
+
+
+def where(project: str | None, location: str | None) -> tuple[str, str]:
+    project = project or default_project()
+    location = location or os.environ.get("AGENT_ENGINE_LOCATION")
+    if not location:
+        raise ValueError(
+            "no location: pass location=, or set AGENT_ENGINE_LOCATION. Agent "
+            "Platform is regional, so there is nowhere to look without one."
+        )
+    return project, location
+
+
+def list_engines(project: str | None, location: str | None, token: str) -> list[dict]:
+    project, location = where(project, location)
+    base = f"{host(location)}/v1/projects/{project}/locations/{location}/reasoningEngines"
+    listed = call(base, token).get("reasoningEngines", []) or []
+    return [_describe(e, project, location) for e in listed]
+
+
+def resolve(engine: str, project: str | None, location: str | None, token: str) -> dict:
+    """Take a full resource name, a numeric id, or a display name."""
+    if FULL_NAME.match(engine):
+        _, project, _, location, _, engine_id = engine.split("/")
+    elif engine.isdigit():
+        engine_id = engine
+        project, location = where(project, location)
+    else:
+        # A display name, which is what a person calls it and what the console
+        # shows. Not unique by construction, so an ambiguous one is refused
+        # rather than guessed.
+        project, location = where(project, location)
+        matches = [e for e in list_engines(project, location, token)
+                   if e["display_name"] == engine]
+        if not matches:
+            known = [e["display_name"] for e in list_engines(project, location, token)]
+            raise ValueError(
+                f"no agent named {engine!r} in {project}/{location}. Found: {known or 'none'}"
+            )
+        if len(matches) > 1:
+            raise ValueError(
+                f"{len(matches)} agents are named {engine!r} in {project}/{location}: "
+                f"{[m['id'] for m in matches]}. Pass an id."
+            )
+        return matches[0]
+
+    base = f"{host(location)}/v1/projects/{project}/locations/{location}/reasoningEngines"
+    detail = call(f"{base}/{engine_id}", token)
+    spec = detail.get("spec", {}) or {}
+    return _describe(detail, project, location)
 
 
 def query_url(engine: dict, transport: str) -> tuple[str, str]:

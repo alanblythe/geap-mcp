@@ -14,11 +14,13 @@ client. That is the gap this fills.
 
 | Tool | What it does |
 | :--- | :--- |
+| `list_agents` | List the agents deployed in a project and region |
 | `start_query` | Send a message to a deployed agent; returns a run id immediately |
 | `read_query` | Read what the run has done since a cursor, one line per action |
 | `cancel_query` | Stop following a run; the agent keeps working |
 
-`message` is passed through untouched — prose for a conversational agent, a
+`engine` takes a display name, a numeric id, or a full resource name, so
+`list_agents` output goes straight back in. `message` is passed through untouched — prose for a conversational agent, a
 JSON string for one expecting a job. Knowing which the agent wants is the
 caller's business.
 
@@ -62,6 +64,5 @@ too, `async_stream_query` included.
 
 ## Status
 
-Early. `start_query`, `read_query` and `cancel_query` work against a live
-container engine. Listing deployed agents, sessions and memory are not built
-yet.
+Early. All four tools work against a live container engine. Sessions and
+memory are not built yet.

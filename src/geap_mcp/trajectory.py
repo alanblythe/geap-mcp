@@ -12,6 +12,7 @@ import sys
 VERBS = {
     "view_file": "read",
     "find_file": "find",
+    "list_directory": "list",
     "run_command": "run",
     "edit_file": "edit",
     "commit_and_push": "push",
@@ -28,6 +29,8 @@ def _detail(name: str, args: dict) -> str:
         return args.get("file_path", "").split("/repo/")[-1]
     if name == "find_file":
         return args.get("query", "")
+    if name == "list_directory":
+        return args.get("directory_path", "").split("/repo")[-1] or "/"
     if name == "commit_and_push":
         return args.get("message", "").split("\n")[0]
     if name == "time_remaining":
