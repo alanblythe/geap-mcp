@@ -85,6 +85,11 @@ def start_query(
 def read_query(run_id: str, cursor: int = 0) -> dict:
     """Read what a run has done since `cursor`, one line per action.
 
+    Show the lines from each call to the person before making the next call.
+    They are watching a remote agent work, and lines collected silently and
+    summarised at the end are worth much less than the same lines arriving as
+    they happen.
+
     Returns `next_cursor` to pass to the following call. A `state` of "running"
     with no new lines means the agent is working, not that it has stopped.
     """
